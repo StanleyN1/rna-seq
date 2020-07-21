@@ -23,16 +23,14 @@ if not os.path.exists(UPLOAD_DIRECTORY):
 
 adata = sc.read(path + '/data/brain_analysis.h5ad')
 
-adata.to_df()
-
 pca = adata.obsm['X_pca']
 umap = adata.obsm['X_umap']
 tsne = adata.obsm['X_tsne']
 
 algorithms = {
-    'X_pca' : pca,
-    'X_umap': umap,
-    'X_tsne': tsne
+    'PCA' : pca,
+    'UMAP': umap,
+    'TSNE': tsne
 }
 #COLOR SCHEME, LEGEND,
 server = Flask(__name__)
@@ -94,66 +92,26 @@ def update_graph(analysis_types, meta_type):
     graphs = []
     meta_colors = {}
     meta_color = []
-    meta_cell = []
     if meta_type:
-        meta_cell = adata.obs[str(meta_type)]
         meta_colors = { #generates random hex color values for the meta data types
-            str(m) : "#{:06x}".format(randint(0x3FFFFF, 0xBFFFFF)) for m in meta_cell.unique()
+            str(m) : "#{:06x}".format(randint(0x3FFFFF, 0xBFFFFF)) for m in adata.obs[str(meta_type)].unique()
         }
-        meta_color = [meta_colors[c] for c in list(meta_cell.unique())] #converts meta data value to hex value
+        meta_color = [meta_colors[c] for c in list(adata.obs[str(meta_type)])] #converts meta data value to hex value
 
-    df = adata.obsm.to_df() #converts adata to dataframe
-    data = []
     for analysis in analysis_types:
-        # x=[data[0] for data in algorithms[analysis]]
-        # y=[data[1] for data in algorithms[analysis]]
+        x=[data[0] for data in algorithms[analysis]]
+        y=[data[1] for data in algorithms[analysis]]
 
-        # df = {'index': adata.obs.index, 'x':x, 'y':y, 'meta_data': list(adata.obs[str(meta_type)]), 'meta_color': meta_color}
-        if meta_type and not meta_cell.empty: #makes sure meta_type is not null
-
-            df[meta_type] = list(meta_cell) #add metadata column
-
-            for meta in list(meta_cell.unique()):
-                masked_df = df[df[meta_type] == meta]
-                # masked_df = df[df['mouse.sex'] == 'F']
-                # analysis='X_pca'
-                x = list(masked_df[analysis + '1'])
-                y = list(masked_df[analysis + '2'])
-                data.append(go.Scatter(
-                    x=x,
-                    y=y,
-                    mode='markers',
-                    marker=dict(color=meta_colors[meta]),
-                    name=meta,
-                    hoverinfo='skip'
-                ))
-        else:
-            x = list(df[analysis + '1'])
-            y = list(df[analysis + '2'])
-            data.append(go.Scatter(
-                x=x,
-                y=y,
-                mode='markers',
-                hoverinfo='skip'
-            ))
-        # data = go.Scatter(
-        #     x=x,
-        #     y=y,
-        #     mode='markers',
-        #     marker=dict(color=meta_color),
-        #     name="UMAP+PCA"
-        # )
-
-        # data = go.Scatter(
-        #     df,
-        #     x='x',
-        #     y='y',
-        #     color='meta_deta'
-        # )
+        data = go.Scatter(
+            x=x,
+            y=y,
+            mode='markers',
+            marker=dict(color=meta_color)
+        )
 
         graphs.append(html.Div(dcc.Graph(
             id=analysis,
-            figure={'data':data, 'layout': go.Layout(xaxis=dict(range=[min(x), max(x)]),
+            figure={'data':[data], 'layout': go.Layout(xaxis=dict(range=[min(x), max(x)]),
                                                        yaxis=dict(range=[min(y), max(y)]),
                                                        margin={'l':50, 'r':1, 't':45, 'b':1},
                                                        title=analysis,
@@ -161,7 +119,7 @@ def update_graph(analysis_types, meta_type):
                                                        legend=dict(
                                                         yanchor="top",
                                                         y=0.99,
-                                                        xanchor="right",
+                                                        xanchor="left",
                                                         x=0.01
                                                     ))}
         )))
